@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 预言生成器</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Noto+Serif+SC:wght@300;500;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background-color: #050505;
+            background-image: 
+                radial-gradient(circle at 50% 0%, #1a103c 0%, transparent 70%),
+                radial-gradient(circle at 0% 100%, #1f1221 0%, transparent 50%);
+            color: #e2e8f0;
+            font-family: 'Noto Serif SC', 'Playfair Display', serif;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .mystic-border {
+            position: relative;
+            background: rgba(20, 20, 25, 0.6);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 215, 0, 0.1);
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+        }
+
+        .mystic-border::before, .mystic-border::after {
+            content: '';
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            border: 1px solid rgba(255, 215, 0, 0.4);
+            transition: all 0.3s ease;
+        }
+
+        .mystic-border::before { top: -1px; left: -1px; border-right: none; border-bottom: none; }
+        .mystic-border::after { bottom: -1px; right: -1px; border-left: none; border-top: none; }
+
+        .gold-text {
+            background: linear-gradient(to bottom, #cfc09f 0%, #ffecb3 40%, #3a2c0f 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .input-area {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid #4a4a5a;
+            color: #d1d5db;
+            transition: all 0.4s ease;
+        }
+
+        .input-area:focus {
+            border-color: #a78bfa;
+            box-shadow: 0 0 15px rgba(167, 139, 250, 0.2);
+            outline: none;
+        }
+
+        .btn-mystic {
+            background: linear-gradient(45deg, #2e1065, #4c1d95);
+            border: 1px solid #7c3aed;
+            transition: all 0.5s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-mystic:hover {
+            box-shadow: 0 0 20px rgba(139, 92, 246, 0.6);
+            transform: translateY(-2px);
+        }
+        
+        .btn-mystic::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(to right, transparent, rgba(255,255,255,0.1), transparent);
+            transform: rotate(45deg);
+            animation: shimmer 3s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%) rotate(45deg); }
+            100% { transform: translateX(100%) rotate(45deg); }
+        }
+
+        @keyframes fadeReveal {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .reveal-anim {
+            animation: fadeReveal 1.5s ease-out forwards;
+        }
+
+        .font-cinzel {
+            font-family: 'Cinzel', serif;
+        }
+
+        /* Meditation Mode Styles */
+        .meditation-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at center, #1a103c 0%, #050505 100%);
+            z-index: 50;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 1s ease;
+        }
+
+        .meditation-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .meditation-circle {
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            border: 2px solid rgba(255, 215, 0, 0.1);
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .meditation-circle:active {
+            transform: scale(0.95);
+        }
+
+        .progress-ring {
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            width: 204px;
+            height: 204px;
+            transform: rotate(-90deg);
+        }
+
+        .progress-ring circle {
+            fill: transparent;
+            stroke: #a78bfa;
+            stroke-width: 4;
+            stroke-dasharray: 628; /* 2 * PI * 100 */
+            stroke-dashoffset: 628;
+            transition: stroke-dashoffset 0.1s linear;
+        }
+
+        .pulse-anim {
+            animation: pulse-gold 3s infinite;
+        }
+
+        @keyframes pulse-gold {
+            0% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0.1); }
+            70% { box-shadow: 0 0 0 20px rgba(255, 215, 0, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0); }
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center p-4">
+
+    <div class="max-w-md w-full my-auto relative z-10">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <div class="w-16 h-16 mx-auto mb-4 rounded-full border border-amber-900/50 flex items-center justify-center bg-black/40 shadow-[0_0_20px_rgba(120,53,15,0.3)]">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-amber-200/70" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+            </div>
+            <h1 class="text-3xl font-bold mb-2 gold-text font-cinzel tracking-wider">AI 预言生成器</h1>
+            <p class="text-xs text-amber-100/40 tracking-widest uppercase">仅供娱乐 · For Entertainment Only</p>
+        </div>
+
+        <!-- Language Toggle -->
+        <div class="flex justify-center mb-6">
+            <div class="flex bg-black/40 rounded-full p-1 border border-amber-900/30 relative">
+                <div id="langHighlight" class="absolute top-1 left-1 w-[calc(50%-4px)] h-[calc(100%-8px)] bg-amber-900/60 rounded-full transition-all duration-300"></div>
+                <button id="langEnBtn" class="relative z-10 px-4 py-1 text-xs font-cinzel font-bold text-amber-100 transition-colors w-20">ENGLISH</button>
+                <button id="langCnBtn" class="relative z-10 px-4 py-1 text-xs font-serif font-bold text-amber-100/50 transition-colors w-20">中文</button>
+            </div>
+        </div>
+
+        <!-- Main Card -->
+        <div class="mystic-border rounded-lg p-8">
+            <div id="input-section">
+                <label id="inputLabel" class="block text-amber-100/80 text-sm mb-3 text-center italic tracking-wide" for="userInput">
+                    "请在此表达你心中的疑虑..."
+                </label>
+                <textarea 
+                    id="userInput" 
+                    rows="4" 
+                    class="input-area w-full rounded p-4 text-lg mb-6 text-center placeholder-gray-600 font-serif"
+                    placeholder="Enter your question here..."
+                ></textarea>
+
+                <div class="flex gap-3">
+                    <button id="generateBtn" class="btn-mystic flex-1 py-3 rounded text-amber-50 font-cinzel font-bold tracking-widest uppercase text-sm cursor-pointer">
+                        寻求启示
+                    </button>
+                    <button id="meditateBtn" class="btn-mystic px-4 py-3 rounded text-amber-50 font-cinzel font-bold tracking-widest uppercase text-sm cursor-pointer bg-indigo-900 border-indigo-700" title="冥想模式">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Output Section (Hidden initially) -->
+            <div id="output-section" class="hidden mt-6 border-t border-white/10 pt-6 text-center">
+                <p class="text-xs text-amber-200/60 mb-4 uppercase tracking-[0.2em]">The Prophecy</p>
+                <div id="resultText" class="text-2xl mb-6 text-amber-50 font-cinzel leading-relaxed break-words"></div>
+                
+                <div class="bg-black/40 p-4 rounded border border-white/5 mb-4">
+                    <p class="text-sm text-gray-400 italic mb-3">
+                        "去用这串文字生成图片，它们将蕴藏你的启示。"
+                    </p>
+                    <p class="text-xs text-amber-100/30 border-t border-white/5 pt-2">
+                        * 用较旧的AI模型生成图片效果更佳，因为它们足够模糊，并且不会优化提示词。
+                    </p>
+                </div>
+                
+                <button id="resetBtn" class="mt-6 text-xs text-amber-200/40 hover:text-amber-200 transition-colors uppercase tracking-widest">
+                    再次提问
+                </button>
+            </div>
+        </div>
+        
+        <div class="text-center mt-12 opacity-30">
+            <p class="text-[10px] font-cinzel">MYS · TIC · ALG · O</p>
+        </div>
+    </div>
+
+    <!-- Meditation Overlay -->
+    <div id="meditationOverlay" class="meditation-overlay">
+        <div class="text-center mb-12">
+            <h2 class="text-2xl font-cinzel text-amber-100 mb-4">Deep Reflection</h2>
+            <p class="text-sm text-amber-100/60 max-w-xs mx-auto leading-relaxed">
+                闭上眼睛，专注于你心中的疑虑。<br>按住圆环，保持冥想 30 秒...
+            </p>
+        </div>
+        
+        <div id="meditationCircle" class="meditation-circle bg-black/30 pulse-anim">
+            <svg class="progress-ring">
+                <circle cx="102" cy="102" r="100"></circle>
+            </svg>
+            <div class="text-amber-100/80 font-cinzel text-lg tracking-widest pointer-events-none select-none">
+                HOLD
+            </div>
+        </div>
+        
+        <button id="closeMeditation" class="mt-16 text-amber-100/30 hover:text-amber-100 text-sm uppercase tracking-widest transition-colors">
+            返回 / Cancel
+        </button>
+    </div>
+
+    <script>
+        // --- State Management ---
+        let currentMode = 'en'; // 'en' or 'cn'
+
+        // --- Data Sets ---
+        const vowels = ['a', 'e', 'i', 'o', 'u'];
+        const consonants = [
+            'b', 'c', 'd', 'f', 'g', 'h', 'j', 'k', 'l', 'm', 
+            'n', 'p', 'q', 'r', 's', 't', 'v', 'w', 'x', 'z'
+        ];
+        const clusters = [
+            'str', 'spr', 'scr', 'chr', 'thr', 'spl', 'sch',
+            'th', 'sh', 'ch', 'ph', 'wh', 'bl', 'cl', 'fl', 'gl', 'pl', 'sl', 
+            'br', 'cr', 'dr', 'fr', 'gr', 'pr', 'tr', 'sc', 'sk', 'sm', 'sn', 
+            'sp', 'st', 'sw', 'tw', 'qu', 'wr', 'kn', 'gn', 'ck', 'ng'
+        ];
+        
+        // Frequently used Chinese characters (about 500)
+        const commonChineseChars = "的一是在不了有和人这中大为上个国我以要他时来用们生到作地于出就分对成会可主发年动同工也能下过子说产种面而方后多定行学法所民得经十三之进着等部度家电力里如水化高自二理起小物现实量都两体制机当使点从业本去把性好应开它合还因由其些然前外天政四日那社义事平形相全表间样与关各重新线内数正心反你明看原又么利比或但质气第向道命此变条只没结解问意建月公无系军很情者最立代想已通并提直题党程展五果料象员革位入常文总次品式活设及管特件长求老头基资边流路级少员机山心压员感";
+        
+        // --- Helper Functions ---
+
+        function getRandom(arr, current) {
+            let choice = arr[Math.floor(Math.random() * arr.length)];
+            if (choice === current && arr.length > 1) {
+                choice = arr[Math.floor(Math.random() * arr.length)];
+            }
+            return choice;
+        }
+
+        function getRandomChar() {
+            return commonChineseChars[Math.floor(Math.random() * commonChineseChars.length)];
+        }
+
+        function matchCase(source, replacement) {
+            if (!/[a-zA-Z]/.test(source[0])) return replacement;
+            if (source === source.toUpperCase()) return replacement.toUpperCase();
+            if (source[0] === source[0].toUpperCase()) {
+                return replacement.charAt(0).toUpperCase() + replacement.slice(1).toLowerCase();
+            }
+            return replacement.toLowerCase();
+        }
+
+        // --- English Transformation ---
+
+        function transformTextEN(input) {
+            let result = "";
+            let i = 0;
+            
+            while (i < input.length) {
+                let matched = false;
+                let char = input[i];
+                
+                // Automatically ignore non-English symbols (pass through, but don't transform)
+                if (!/[a-zA-Z]/.test(char)) {
+                    result += char;
+                    i++;
+                    continue;
+                }
+
+                let charLower = char.toLowerCase();
+
+                // Clusters
+                if (i + 2 < input.length) {
+                    let chunk3 = input.substring(i, i + 3);
+                    if (clusters.includes(chunk3.toLowerCase())) {
+                        let replacement = getRandom(clusters.filter(c => c.length === 3), chunk3.toLowerCase());
+                        if (!replacement) replacement = getRandom(clusters, chunk3.toLowerCase());
+                        result += matchCase(chunk3, replacement);
+                        i += 3; matched = true; continue;
+                    }
+                }
+                if (!matched && i + 1 < input.length) {
+                    let chunk2 = input.substring(i, i + 2);
+                    if (clusters.includes(chunk2.toLowerCase())) {
+                        let replacement = getRandom(clusters.filter(c => c.length === 2), chunk2.toLowerCase());
+                        result += matchCase(chunk2, replacement);
+                        i += 2; matched = true; continue;
+                    }
+                }
+
+                // Single Chars
+                if (!matched) {
+                    if (vowels.includes(charLower)) {
+                        result += matchCase(char, getRandom(vowels, charLower));
+                    } else if (consonants.includes(charLower)) {
+                        result += matchCase(char, getRandom(consonants, charLower));
+                    } else {
+                        result += char;
+                    }
+                    i++;
+                }
+            }
+            return result;
+        }
+
+        function generateRandomProphecyEN() {
+            const length = 12 + Math.floor(Math.random() * 10);
+            let words = [];
+            for(let w=0; w<length; w++) {
+                let wordLen = 3 + Math.floor(Math.random() * 5);
+                let word = "";
+                let isVowel = Math.random() > 0.5;
+                while(word.length < wordLen) {
+                    if(isVowel) {
+                        word += vowels[Math.floor(Math.random() * vowels.length)];
+                        isVowel = false;
+                    } else {
+                        if(Math.random() < 0.3 && wordLen - word.length >= 2) {
+                            let cl = clusters[Math.floor(Math.random() * clusters.length)];
+                            word += cl;
+                        } else {
+                            word += consonants[Math.floor(Math.random() * consonants.length)];
+                        }
+                        isVowel = true;
+                    }
+                }
+                if(w === 0) word = word.charAt(0).toUpperCase() + word.slice(1);
+                words.push(word);
+            }
+            return words.join(' ') + ".";
+        }
+
+        // --- Chinese Transformation ---
+
+        function transformTextCN(input) {
+            let result = "";
+            for (let i = 0; i < input.length; i++) {
+                const char = input[i];
+                // Check if Chinese Character (basic range)
+                if (/[\u4e00-\u9fa5]/.test(char)) {
+                    result += getRandomChar();
+                } else {
+                    result += char;
+                }
+            }
+            return result;
+        }
+
+        function generateRandomProphecyCN() {
+            const totalLen = 20 + Math.floor(Math.random() * 30);
+            let result = "";
+            let currentChunkLen = 0;
+            let targetChunkLen = 3 + Math.floor(Math.random() * 5);
+            
+            for (let i = 0; i < totalLen; i++) {
+                result += getRandomChar();
+                currentChunkLen++;
+                if (currentChunkLen >= targetChunkLen && i < totalLen - 2) {
+                    result += "，";
+                    currentChunkLen = 0;
+                    targetChunkLen = 2 + Math.floor(Math.random() * 6);
+                }
+            }
+            return result + "。";
+        }
+
+        // --- UI Logic ---
+        const generateBtn = document.getElementById('generateBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const inputSection = document.getElementById('input-section');
+        const outputSection = document.getElementById('output-section');
+        const resultText = document.getElementById('resultText');
+        const userInput = document.getElementById('userInput');
+        const inputLabel = document.getElementById('inputLabel');
+
+        // Language Toggle
+        const langEnBtn = document.getElementById('langEnBtn');
+        const langCnBtn = document.getElementById('langCnBtn');
+        const langHighlight = document.getElementById('langHighlight');
+
+        function setLanguage(lang) {
+            currentMode = lang;
+            if (lang === 'en') {
+                langHighlight.style.transform = 'translateX(0)';
+                langEnBtn.classList.replace('text-amber-100/50', 'text-amber-100');
+                langCnBtn.classList.replace('text-amber-100', 'text-amber-100/50');
+                inputLabel.textContent = `"Please express your doubts here..."`;
+                userInput.placeholder = "Enter your question here...";
+                generateBtn.textContent = "SEEK PROPHECY";
+            } else {
+                langHighlight.style.transform = 'translateX(100%)';
+                langEnBtn.classList.replace('text-amber-100', 'text-amber-100/50');
+                langCnBtn.classList.replace('text-amber-100/50', 'text-amber-100');
+                inputLabel.textContent = `"请在此表达你心中的疑虑..."`;
+                userInput.placeholder = "在此输入你的问题...";
+                generateBtn.textContent = "寻求启示";
+            }
+        }
+
+        langEnBtn.addEventListener('click', () => setLanguage('en'));
+        langCnBtn.addEventListener('click', () => setLanguage('cn'));
+
+        // Default init
+        setLanguage('cn'); 
+
+        function showResult(text) {
+            resultText.textContent = text;
+            inputSection.classList.add('hidden');
+            outputSection.classList.remove('hidden');
+            outputSection.classList.add('reveal-anim');
+        }
+
+        generateBtn.addEventListener('click', () => {
+            const text = userInput.value.trim();
+            if (!text) return;
+
+            const loadingText = currentMode === 'en' ? 'Consulting...' : '正在通灵...';
+            const btnOriginalText = generateBtn.textContent;
+            generateBtn.innerHTML = `<span class="animate-pulse">${loadingText}</span>`;
+            
+            const prophecy = currentMode === 'en' ? transformTextEN(text) : transformTextCN(text);
+            
+            setTimeout(() => {
+                showResult(prophecy);
+                generateBtn.textContent = btnOriginalText;
+            }, 800);
+        });
+
+        resetBtn.addEventListener('click', () => {
+            outputSection.classList.add('hidden');
+            outputSection.classList.remove('reveal-anim');
+            inputSection.classList.remove('hidden');
+            userInput.value = '';
+        });
+
+        // --- Meditation Logic ---
+        const meditateBtn = document.getElementById('meditateBtn');
+        const meditationOverlay = document.getElementById('meditationOverlay');
+        const closeMeditation = document.getElementById('closeMeditation');
+        const meditationCircle = document.getElementById('meditationCircle');
+        const circleSvg = meditationCircle.querySelector('circle');
+        const medTitle = meditationOverlay.querySelector('h2');
+        const medDesc = meditationOverlay.querySelector('p');
+        const medBack = document.getElementById('closeMeditation');
+        
+        let audioCtx = null;
+        let oscillators = [];
+        let gainNode = null;
+        let lfo = null;
+        let lfoGain = null;
+        let timerInterval = null;
+        let progress = 0;
+        const TARGET_TIME = 30000; 
+        const UPDATE_INTERVAL = 50; 
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+
+        function startSound() {
+            if (!audioCtx) initAudio();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+
+            // Master Gain
+            gainNode = audioCtx.createGain();
+            gainNode.gain.setValueAtTime(0.01, audioCtx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.15, audioCtx.currentTime + 3);
+            gainNode.connect(audioCtx.destination);
+
+            // Oscillators for Drone (A2 + detuned + Bass A1)
+            const freqs = [110, 114, 55]; 
+            const types = ['sine', 'sine', 'triangle'];
+            
+            oscillators = freqs.map((f, i) => {
+                const osc = audioCtx.createOscillator();
+                osc.type = types[i];
+                osc.frequency.value = f;
+                osc.connect(gainNode);
+                osc.start();
+                return osc;
+            });
+
+            // LFO for breathing effect
+            lfo = audioCtx.createOscillator();
+            lfo.type = 'sine';
+            lfo.frequency.value = 0.2; // 5 seconds per cycle
+            
+            lfoGain = audioCtx.createGain();
+            lfoGain.gain.value = 0.05; // Depth
+            
+            lfo.connect(lfoGain);
+            lfoGain.connect(gainNode.gain);
+            lfo.start();
+        }
+
+        function stopSound() {
+            if (gainNode) {
+                // Prevent clicking on stop
+                gainNode.gain.setTargetAtTime(0, audioCtx.currentTime, 0.5);
+                setTimeout(() => {
+                    if(oscillators) oscillators.forEach(o => o.stop());
+                    if(lfo) lfo.stop();
+                    oscillators = [];
+                    lfo = null;
+                }, 1000);
+            }
+        }
+
+        meditateBtn.addEventListener('click', () => {
+            // Update text based on language
+            if (currentMode === 'en') {
+                medTitle.textContent = "Deep Reflection";
+                medDesc.innerHTML = "Close your eyes, focus on your question.<br>Hold the circle to meditate for 30 seconds...";
+                medBack.textContent = "Return / Cancel";
+            } else {
+                medTitle.textContent = "深层冥想";
+                medDesc.innerHTML = "闭上眼睛，专注于你心中的疑虑。<br>按住圆环，保持冥想 30 秒...";
+                medBack.textContent = "返回 / Cancel";
+            }
+            meditationOverlay.classList.add('active');
+        });
+
+        closeMeditation.addEventListener('click', () => {
+            meditationOverlay.classList.remove('active');
+            stopMeditation();
+        });
+
+        function updateProgress(percent) {
+            const offset = 628 - (percent / 100) * 628;
+            circleSvg.style.strokeDashoffset = offset;
+        }
+
+        function startMeditation() {
+            startSound();
+            progress = 0;
+            const startTime = Date.now();
+            
+            meditationCircle.querySelector('div').textContent = "HOLD...";
+            meditationCircle.classList.add('scale-95');
+
+            timerInterval = setInterval(() => {
+                const elapsed = Date.now() - startTime;
+                progress = Math.min((elapsed / TARGET_TIME) * 100, 100);
+                updateProgress(progress);
+
+                if (progress >= 100) {
+                    completeMeditation();
+                }
+            }, UPDATE_INTERVAL);
+        }
+
+        function stopMeditation() {
+            stopSound();
+            clearInterval(timerInterval);
+            progress = 0;
+            updateProgress(0);
+            meditationCircle.querySelector('div').textContent = "HOLD";
+            meditationCircle.classList.remove('scale-95');
+        }
+
+        function completeMeditation() {
+            stopMeditation();
+            meditationOverlay.classList.remove('active');
+            const randomProphecy = currentMode === 'en' ? generateRandomProphecyEN() : generateRandomProphecyCN();
+            showResult(randomProphecy);
+        }
+
+        // Touch/Mouse events for the circle
+        const startEvents = ['mousedown', 'touchstart'];
+        const endEvents = ['mouseup', 'mouseleave', 'touchend'];
+
+        startEvents.forEach(evt => {
+            meditationCircle.addEventListener(evt, (e) => {
+                e.preventDefault();
+                startMeditation();
+            });
+        });
+
+        endEvents.forEach(evt => {
+            meditationCircle.addEventListener(evt, (e) => {
+                if (progress < 100) {
+                    stopMeditation();
+                }
+            });
+        });
+
+    </script>
+</body>
+</html>
